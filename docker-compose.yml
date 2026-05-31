@@ -1,0 +1,56 @@
+services:
+  # Redis for caching, rate limiting, and circuit breaker state
+  redis:
+    image: redis:7-alpine
+    container_name: tokensgate-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes
+    networks:
+      - tokensgate-network
+
+  # FastAPI Gateway
+  gateway:
+    build: .
+    container_name: tokensgate-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=development
+      # Phase 3: Ollama fallback (host.docker.internal targets the host's
+      # Ollama instance from inside the gateway container)
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
+      - OLLAMA_TIMEOUT_SECONDS=${OLLAMA_TIMEOUT_SECONDS:-60}
+      - OLLAMA_FALLBACK_ENABLED=${OLLAMA_FALLBACK_ENABLED:-true}
+      # Phase 3: Circuit breaker
+      - CIRCUIT_BREAKER_ENABLED=${CIRCUIT_BREAKER_ENABLED:-true}
+      - CB_FAILURE_THRESHOLD=${CB_FAILURE_THRESHOLD:-5}
+      - CB_WINDOW_SECONDS=${CB_WINDOW_SECONDS:-30}
+      - CB_COOLDOWN_SECONDS=${CB_COOLDOWN_SECONDS:-60}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app  # Hot reload during development
+    networks:
+      - tokensgate-network
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  tokensgate-network:
+    driver: bridge
