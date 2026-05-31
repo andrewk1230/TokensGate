@@ -12,7 +12,7 @@ Reduces LLM API expenditures via token compression and caching while guaranteein
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/<your-username>/TokensGate.git
+git clone https://github.com/andrewk1230/TokensGate.git
 cd TokensGate
 
 # 2. Copy the env template and add your Anthropic key
@@ -44,7 +44,7 @@ open http://localhost:8000/dashboard   # macOS
 ### Step 1: Set Up Environment Variables
 
 ```bash
-cd "00 Notes/Coding/Projects/TokensGate"
+cd TokensGate
 cp .env.example .env.local
 ```
 
@@ -165,21 +165,21 @@ TokensGate/
 
 ## Features
 
-### Phase 1: Foundation ✅
+### Foundation 
 - **OpenAI-compatible API** at `/v1/chat/completions`
 - **Token counting** via `tiktoken` (estimates only — billing uses `response.usage` from Anthropic)
 - **Cost estimation** with per-model pricing table
 - **Redis integration** for caching, metrics, rate limiting
 - **Structured logging** with request IDs
 
-### Phase 2: Core Logic ✅
+### Core Logic 
 - **Deterministic SHA256 prompt cache** — keyed on (model, temperature, max_tokens, messages); 24h TTL
 - **Sliding-window rate limiter** — Redis ZSET log; tracks both requests/min AND tokens/min independently
 - **Cost-aware router** — `X-Route-Strategy: auto|cheap|expensive|explicit`, Haiku <500 tokens, Sonnet ≥500
 - **O(1) counter-based metrics** — no `KEYS *` foot-guns
 - **Response headers** — `X-Cache`, `X-RateLimit-Remaining-*`, `X-TokensGate-*`
 
-### Phase 3: Fault-Tolerant Egress ✅
+### Fault-Tolerant Egress 
 - **Circuit breaker (rolling window)** — per-target state machine (CLOSED → OPEN → HALF_OPEN); trips at 5 failures in any 30s window; 60s cooldown; canary recovery
 - **Ollama fallback provider** — when Anthropic's circuit is OPEN or returns a retryable error (5xx / 429 / timeout), traffic auto-fails-over to a local Ollama instance ($0 cost, no API credits burned)
 - **Persistent CB state in Redis** — survives gateway restarts and is shared across replicas
@@ -354,27 +354,6 @@ pytest tests/test_api.py -v
 
 ---
 
-## Next Steps (Execution Plan)
-
-Follow the **8-week Phase Plan** in `Summer proj.md`:
-
-- **Weeks 1-2:** ✅ Foundation
-  - FastAPI skeleton, Redis integration, token counting
-
-- **Weeks 3-4:** ✅ Core Logic
-  - Prompt caching, sliding-window rate limiting, cost-aware routing
-
-- **Weeks 5-6:** ✅ Resilience (Phase 3)
-  - Circuit breaker (rolling window, persistent state)
-  - Ollama failover provider
-
-- **Weeks 7-8:** ✅ Polish
-  - Live failover benchmarking (`benchmark_failover.py`)
-  - Monitoring dashboard (`GET /dashboard`)
-  - Documentation refresh
-
----
-
 ## Ollama Fallback Setup
 
 Phase 3 adds a local Ollama provider as fallback. To enable:
@@ -470,7 +449,7 @@ docker-compose down -v
 
 ---
 
-## Performance Targets (By Week 8)
+## Performance Targets
 
 | Metric | Target |
 |--------|--------|
@@ -506,15 +485,3 @@ docker-compose down -v
 - [Docker Compose Docs](https://docs.docker.com/compose/)
 
 ---
-
-## License
-
-MIT License (or as specified in project)
-
----
-
-## Questions?
-
-Check `Summer proj.md` for the full technical specification and execution plan.
-
-Ready to build? 🚀
